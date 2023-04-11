@@ -1,0 +1,10 @@
+{% block content %}
+  <h1>Courses</h1>
+  <ul>
+    {% for course in courses %}
+        <li>{{ course.name }} - {{ course.description }} - {{ course.spaces_left }} spaces left <a href="{% url 'enroll' course.id %}">Enroll</a></li>
+    {% endfor %}
+    </ul>
+    
+
+{% endblock %}

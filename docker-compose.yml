@@ -1,0 +1,21 @@
+version: '3'
+services:
+  db:
+    image: postgres:alpine3.17
+    environment:
+      POSTGRES_DB: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - db_data:/var/lib/postgresql/data/
+  web:
+    build: .
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/code
+    depends_on:
+      - db
+  
+volumes:
+  db_data:

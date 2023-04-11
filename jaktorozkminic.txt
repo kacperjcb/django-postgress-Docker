@@ -1,0 +1,3 @@
+Kontener 
+Instalacja w nim python3
+Instalacja w nim djangorestframework
