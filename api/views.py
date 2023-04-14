@@ -1,52 +1,48 @@
+from rest_framework import viewsets
+from rest_framework.views import APIView
+from django.urls import path
+from base.models import Course
+from .serializers import CourseSerializer
 from rest_framework.response import Response
-from rest_framework.decorators import api_view
-from base.models import Course, Enrollment
-from .serializers import CourseSerializer, EnrollmentSerializer
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
-from django.contrib import messages
-from django.urls import re_path
-@api_view(['GET'])
-def getCourse(request):
-    items = Course.objects.all()
-    serializer = CourseSerializer(items, many=True)
-    return Response(serializer.data)
+from rest_framework.permissions import IsAuthenticated
+from base.models import Enrollment
+from .serializers import EnrollmentSerializer
+class CourseViewSet(viewsets.ModelViewSet):
+    queryset = Course.objects.all()
+    serializer_class = CourseSerializer
 
-def home(request):
-    courses = Course.objects.all()
-    return render(request, 'home.html', {'courses': courses})
-def enroll(request, course_id):
-    course = get_object_or_404(Course, id=course_id)
-    form = EnrollmentForm(request.POST or None)
-    if form.is_valid():
-        enrollment = form.save(commit=False)
-        enrollment.course = course
-        enrollment.user = request.user
-        enrollment.save()
-        messages.success(request, 'You have successfully enrolled in the course!')
-        return redirect('course_app:course_detail', course.id)
-    return render(request, 'enroll.html', {'form': form, 'course': course})
+class CourseDetailView(APIView):
+    def get(self, request, pk):
+        course = Course.objects.get(pk=pk)
+        serializer = CourseSerializer(course)
+        return Response(serializer.data)
 
-def course_detail(request, course_id):
-    course = get_object_or_404(Course, id=course_id)
-    return render(request, 'course_detail.html', {'course': course})
+urlpatterns = [
+    path('api/<int:pk>/', CourseDetailView.as_view()),
+]
+class EnrollmentViewSet(viewsets.ModelViewSet):
+    permission_classes = [IsAuthenticated]
+    queryset = Enrollment.objects.all()
+    serializer_class = EnrollmentSerializer
 
-@api_view(['GET'])
-def getEnrollment(request):
-    items = Enrollment.objects.all()
-    serializer = EnrollmentSerializer(items, many=True)
-    return Response(serializer.data)
-@api_view(['POST'])
-def addCourse(request):
-    serializer= CourseSerializer(data=request.data)
-    if serializer.is_valid():
-        serializer.save()
-    return Response(serializer.data)
-@api_view(['POST'])
-def addEnrollment(request):
-    serializer= EnrollmentSerializer(data=request.data)
-    if serializer.is_valid():
-        serializer.save()
-    return Response(serializer.data)
+    def create(self, request):
+        serializer = self.serializer_class(data=request.data)
+        if serializer.is_valid():
+            serializer.save(user=request.user)
+            return Response(serializer.data, status=201)
+        return Response(serializer.errors, status=400)
 
+    def update(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.serializer_class(instance, data=request.data, partial=partial)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=400)
+
+    def destroy(self, request, *args, **kwargs):
+        instance = self.get_object()
+        instance.delete()
+        return Response(status=204)
 
